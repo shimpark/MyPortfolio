@@ -1,0 +1,36 @@
+name: CI/CD → Render 배포
+
+on:
+  push:
+    branches: ["main"] # main 브랜치 push 시 실행
+  workflow_dispatch: # GitHub UI에서 수동 실행 가능
+
+jobs:
+  build-and-deploy:
+    name: 🔨 Build & 🚀 Deploy
+    runs-on: ubuntu-latest # GitHub 무료 VM
+
+    steps:
+      # ① 소스코드 체크아웃
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      # ② .NET 8 SDK 설치
+      - name: ⚙️ Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      # ③ NuGet 패키지 복원
+      - name: 📦 Restore
+        run: dotnet restore
+
+      # ④ Release 빌드 (실패 시 이후 단계 실행 안 됨)
+      - name: 🔨 Build
+        run: dotnet build --configuration Release --no-restore
+
+      # ⑤ Render Deploy Hook 호출 (빌드 성공 시에만 실행)
+      - name: 🚀 Trigger Render Deploy
+        run: |
+          curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" \
+            "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
