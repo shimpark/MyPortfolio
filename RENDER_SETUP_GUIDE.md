@@ -30,12 +30,14 @@
 ## 🔗 생성 후 다음 단계 (ASP.NET Core 연결)
 
 DB 생성이 완료되면 Render 대시보드에 **Internal Database URL** 또는 **External Database URL**이 나타납니다.
+(웹 서비스와 DB가 모두 Render에 있다면 속도가 빠르고 무료인 **Internal** 연결을 추천합니다.)
 
-1. **Connection String 확보:** `postgres://user:password@hostname:port/dbname` 형태의 주소를 복사합니다.
+1. **Connection String 변환:** Render에서 제공하는 `postgres://...` 주소는 Npgsql에서 바로 읽지 못하므로 C# 표준 Key-Value 형태로 변경해야 합니다.
+   * **형식:** `Host=내부주소;Database=DB명;Username=유저명;Password=비밀번호;`
+   * **예시:** `Host=dpg-d82u8r9kh4rs73fk0c5g-a;Database=todo_db_tgn4;Username=todo_db_tgn4_user;Password=본인비밀번호;`
 2. **환경 변수 등록:**
 * Render 웹 서비스 설정의 **Environment** 탭으로 이동합니다.
-* `ConnectionStrings__DefaultConnection` 이라는 이름으로 위 주소를 등록합니다.
-
+* `ConnectionStrings__DefaultConnection` 이라는 Key 이름으로 위 변환된 Key-Value 주소를 등록합니다.
 
 3. **Dapper 연동:**
 * `Program.cs`에서 `NpgsqlConnection`을 사용할 때 이 환경 변수를 읽어오도록 설정되어 있는지 확인하세요.
