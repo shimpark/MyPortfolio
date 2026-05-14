@@ -1,9 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <DefaultItemExcludes>$(DefaultItemExcludes);MyPortfolio.Domain\**;MyPortfolio.Application\**;MyPortfolio.Infrastructure\**</DefaultItemExcludes>
-  </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="MyPortfolio.Domain\MyPortfolio.Domain.csproj" />
     <ProjectReference Include="MyPortfolio.Application\MyPortfolio.Application.csproj" />
@@ -11,7 +7,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MediatR" Version="14.1.0" />
     <PackageReference Include="Npgsql" Version="10.0.2" />
     <PackageReference Include="Scrutor" Version="7.0.0" />
   </ItemGroup>
@@ -20,7 +15,6 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <ItemGroup>

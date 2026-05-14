@@ -1,0 +1,53 @@
+@{
+    ViewData["Title"] = "Todo List";
+}
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+<div id="todoApp">
+    <h2>Todo List</h2>
+    <ul v-bind:class="'todo-list'">
+        <li v-for="item in todos" v-bind:key="item.id">
+            <span v-text="item.title"></span>
+        </li>
+    </ul>
+    <button v-on:click="fetchTodos">새로고침</button>
+</div>
+
+<script>
+(function () {
+    window.todoInit = function () {
+        const { createApp, ref, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const todos = ref([]);
+
+                const fetchTodos = async () => {
+                    try {
+                        const response = await axios.get('/api/todo');
+                        todos.value = response.data;
+                    } catch (error) {
+                        console.error("데이터 로드 실패", error);
+                    }
+                };
+
+                onMounted(() => {
+                    fetchTodos();
+                });
+
+                return {
+                    todos,
+                    fetchTodos
+                };
+            }
+        }).mount('#todoApp');
+    };
+
+    $(document).ready(function () {
+        window.todoInit();
+    });
+})();
+</script>

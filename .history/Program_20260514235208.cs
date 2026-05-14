@@ -1,6 +1,6 @@
 using System.Data;
 using Npgsql;
-using MediatR;
+using Mediator;
 using MyPortfolio.Infrastructure;
 using MyPortfolio.Infrastructure.Repositories;
 using MyPortfolio.Infrastructure.Services;
@@ -19,9 +19,6 @@ builder.Services.AddScoped<IDbConnection>(sp => new NpgsqlConnection(connectionS
 // SQL Cache Service (Singleton)
 builder.Services.AddSingleton<ISqlCacheService, SqlCacheService>();
 
-// MediatR 등록
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetTodosHandler).Assembly));
-
 // Scrutor DI Setup
 builder.Services.Scan(scan => scan
     .FromAssemblies(typeof(TodoRepository).Assembly, typeof(GetTodosHandler).Assembly)
@@ -35,6 +32,7 @@ builder.Services.Scan(scan => scan
         .WithScopedLifetime()
 );
 
+builder.Services.AddMediator();
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();

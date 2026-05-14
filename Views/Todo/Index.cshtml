@@ -1,0 +1,261 @@
+@{
+    ViewData["Title"] = "Todo List";
+}
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+<style>
+    .todo-container {
+        max-width: 600px;
+        margin: 40px auto;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        backdrop-filter: blur(10px);
+    }
+    .todo-header {
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 25px;
+        text-align: center;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .input-group-custom {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .input-group-custom input {
+        border: none;
+        padding: 15px;
+    }
+    .input-group-custom input:focus {
+        box-shadow: none;
+        outline: none;
+    }
+    .input-group-custom button {
+        border-radius: 0;
+        padding: 0 25px;
+        font-weight: 600;
+    }
+    .todo-list {
+        list-style: none;
+        padding: 0;
+        margin-top: 30px;
+    }
+    .todo-item {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        background: #fff;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .todo-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .todo-item.completed .todo-title {
+        text-decoration: line-through;
+        color: #999;
+    }
+    .todo-checkbox {
+        width: 22px;
+        height: 22px;
+        cursor: pointer;
+        margin-right: 15px;
+    }
+    .todo-content {
+        flex-grow: 1;
+    }
+    .todo-title {
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin-bottom: 2px;
+        color: #444;
+    }
+    .todo-date {
+        font-size: 0.8rem;
+        color: #888;
+    }
+    .todo-actions button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.1rem;
+        padding: 5px;
+        transition: color 0.2s;
+    }
+    .btn-edit { color: #ffc107; }
+    .btn-edit:hover { color: #e0a800; }
+    .btn-delete { color: #dc3545; }
+    .btn-delete:hover { color: #c82333; }
+    
+    .edit-input {
+        width: 100%;
+        padding: 5px 10px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+</style>
+
+<div id="todoApp" class="todo-container" v-cloak>
+    <h2 class="todo-header"><i class="fa-solid fa-list-check me-2 text-primary"></i>My Tasks</h2>
+    
+    <div class="input-group input-group-custom mb-3">
+        <input type="text" class="form-control" placeholder="새로운 할 일을 입력하세요..." v-model="newTodoTitle" v-on:keyup.enter="addTodo">
+        <button class="btn btn-primary" type="button" v-on:click="addTodo">
+            <i class="fa-solid fa-plus me-1"></i> 추가
+        </button>
+    </div>
+
+    <ul class="todo-list">
+        <li v-for="item in todos" :key="item.id" class="todo-item" :class="{ completed: item.isCompleted }">
+            <input type="checkbox" class="todo-checkbox" :checked="item.isCompleted" v-on:change="toggleTodo(item)">
+            
+            <div class="todo-content">
+                <div v-if="editingId === item.id">
+                    <input type="text" class="edit-input" v-model="editingTitle" v-on:keyup.enter="saveEdit(item)" v-on:keyup.esc="cancelEdit" ref="editInput">
+                </div>
+                <div v-else>
+                    <div class="todo-title">{{ item.title }}</div>
+                    <div class="todo-date"><i class="fa-regular fa-clock me-1"></i>{{ formatDate(item.createdAt) }}</div>
+                </div>
+            </div>
+            
+            <div class="todo-actions ms-3">
+                <template v-if="editingId === item.id">
+                    <button class="btn-edit text-success" v-on:click="saveEdit(item)" title="저장"><i class="fa-solid fa-check"></i></button>
+                    <button class="btn-delete text-secondary" v-on:click="cancelEdit" title="취소"><i class="fa-solid fa-xmark"></i></button>
+                </template>
+                <template v-else>
+                    <button class="btn-edit" v-on:click="startEdit(item)" title="수정"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-delete" v-on:click="deleteTodo(item.id)" title="삭제"><i class="fa-solid fa-trash"></i></button>
+                </template>
+            </div>
+        </li>
+    </ul>
+    
+    <div v-if="todos.length === 0" class="text-center text-muted mt-4">
+        <i class="fa-regular fa-face-smile-wink fa-2x mb-2"></i>
+        <p>모든 할 일을 마쳤습니다!</p>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, onMounted, nextTick } = Vue;
+
+    createApp({
+        setup() {
+            const todos = ref([]);
+            const newTodoTitle = ref('');
+            const editingId = ref(null);
+            const editingTitle = ref('');
+
+            const fetchTodos = async () => {
+                try {
+                    const response = await axios.get('/api/todo');
+                    todos.value = response.data;
+                } catch (error) {
+                    console.error("데이터 로드 실패", error);
+                }
+            };
+
+            const addTodo = async () => {
+                if (!newTodoTitle.value.trim()) return;
+                try {
+                    const response = await axios.post('/api/todo', { title: newTodoTitle.value });
+                    todos.value.unshift(response.data);
+                    newTodoTitle.value = '';
+                } catch (error) {
+                    console.error("추가 실패", error);
+                    alert("추가 중 오류가 발생했습니다.");
+                }
+            };
+
+            const toggleTodo = async (item) => {
+                const newValue = !item.isCompleted;
+                try {
+                    await axios.patch(`/api/todo/${item.id}/toggle`, { id: item.id, isCompleted: newValue });
+                    item.isCompleted = newValue;
+                } catch (error) {
+                    console.error("토글 실패", error);
+                    alert("상태 변경 중 오류가 발생했습니다.");
+                }
+            };
+
+            const deleteTodo = async (id) => {
+                if (!confirm("정말 삭제하시겠습니까?")) return;
+                try {
+                    await axios.delete(`/api/todo/${id}`);
+                    todos.value = todos.value.filter(t => t.id !== id);
+                } catch (error) {
+                    console.error("삭제 실패", error);
+                    alert("삭제 중 오류가 발생했습니다.");
+                }
+            };
+
+            const startEdit = (item) => {
+                editingId.value = item.id;
+                editingTitle.value = item.title;
+            };
+
+            const cancelEdit = () => {
+                editingId.value = null;
+                editingTitle.value = '';
+            };
+
+            const saveEdit = async (item) => {
+                if (!editingTitle.value.trim()) {
+                    cancelEdit();
+                    return;
+                }
+                if (editingTitle.value === item.title) {
+                    cancelEdit();
+                    return;
+                }
+                
+                try {
+                    await axios.put(`/api/todo/${item.id}`, { id: item.id, title: editingTitle.value });
+                    item.title = editingTitle.value;
+                    cancelEdit();
+                } catch (error) {
+                    console.error("수정 실패", error);
+                    alert("수정 중 오류가 발생했습니다.");
+                }
+            };
+
+            const formatDate = (dateString) => {
+                if (!dateString) return '';
+                const date = new Date(dateString);
+                // KST로 이미 들어왔으므로 그대로 보여주면 됩니다. 
+                // 원한다면 좀 더 예쁘게 포맷팅 가능.
+                return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+            };
+
+            onMounted(() => {
+                fetchTodos();
+            });
+
+            return {
+                todos,
+                newTodoTitle,
+                editingId,
+                editingTitle,
+                fetchTodos,
+                addTodo,
+                toggleTodo,
+                deleteTodo,
+                startEdit,
+                cancelEdit,
+                saveEdit,
+                formatDate
+            };
+        }
+    }).mount('#todoApp');
+</script>
