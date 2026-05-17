@@ -1,3 +1,5 @@
+# Ignore local editor history files
+.history/
 bin/
 obj/
 .vs/
